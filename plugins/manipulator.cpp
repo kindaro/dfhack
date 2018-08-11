@@ -630,15 +630,15 @@ namespace unit_ops {
 
 struct ProfessionTemplate
 {
-    std::string path;
     std::string name;
+    std::string path;
     bool mask;
     std::vector<df::unit_labor> labors;
 
     bool load(string directory, string file)
     {
         path = directory + "/" + file;
-        cerr << "Attempt to load " << file << endl;
+        cerr << "Attempt to load " << path << endl;
         std::ifstream infile(path);
         if (infile.bad()) {
             return false;
@@ -673,9 +673,12 @@ struct ProfessionTemplate
     }
     bool save(string directory)
     {
-        std::ofstream outfile(directory + "/" + name);
-        if (outfile.bad())
+        path = directory + "/" + name;
+        cerr << "Attempt to save " << path << endl;
+        std::ofstream outfile(path);
+        if (outfile.bad()) {
             return false;
+        }
 
         outfile << "NAME " << name << std::endl;
         if (mask)
@@ -771,11 +774,14 @@ public:
     void save_from_unit(UnitInfo *unit)
     {
         ProfessionTemplate t = {
-            unit_ops::get_profname(unit)
+            .name = unit_ops::get_profname(unit)
         };
 
         t.fromUnit(unit);
-        t.save(professions_folder);
+        bool status = t.save(professions_folder);
+        if (!status) {
+            cerr << "Failed saving profession:" + t.name << endl;
+        }
         reload();
     }
 };
