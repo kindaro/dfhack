@@ -2203,7 +2203,7 @@ struct unitlist_hook : df::viewscreen_unitlistst
             auto dim = Screen::getWindowSize();
             int x = 2, y = dim.y - 2;
             OutputString(12, x, y, Screen::getKeyDisplay(interface_key::UNITVIEW_PRF_PROF));
-            OutputString(15, x, y, ": Manage labors (DFHack)");
+            OutputString(15, x, y, ": Manage labors");
         }
     }
 };
