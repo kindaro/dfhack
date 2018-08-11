@@ -10,6 +10,7 @@
 #include <modules/Units.h>
 #include <modules/Filesystem.h>
 #include <modules/Job.h>
+#include <stdio.h>
 #include <vector>
 #include <string>
 #include <set>
@@ -636,9 +637,9 @@ struct ProfessionTemplate
 
     bool load(string directory, string file)
     {
-        path = directory + file;
+        path = directory + "/" + file;
         cerr << "Attempt to load " << file << endl;
-        std::ifstream infile(directory + "/" + file);
+        std::ifstream infile(path);
         if (infile.bad()) {
             return false;
         }
@@ -691,6 +692,11 @@ struct ProfessionTemplate
         outfile.flush();
         outfile.close();
         return true;
+    }
+
+    bool rm() {
+        int status = remove(path.c_str());
+        return status == 0;
     }
 
     void apply(UnitInfo* u)
@@ -1135,7 +1141,14 @@ public:
             return;
         ProfessionTemplate prof = manager.templates[selected];
 
-        cerr << prof.path << endl;
+        cerr << "Removing " + prof.path << endl;
+        bool status = prof.rm();
+        if (status)
+        {
+            manager.reload();
+        } else {
+            cerr << "Removal failed!" << endl;
+        }
     }
     void render()
     {
@@ -1350,7 +1363,7 @@ void viewscreen_unitlaborsst::calcSize()
 {
     auto dim = Screen::getWindowSize();
 
-    num_rows = dim.y - 11;
+    num_rows = dim.y - 12;
     if (num_rows > int(units.size()))
         num_rows = units.size();
 
@@ -2184,7 +2197,7 @@ void viewscreen_unitlaborsst::render()
         canToggle = (cur->allowEdit) && Units::isValidLabor(unit, columns[sel_column].labor);
     }
 
-    int x = 2, y = dim.y - 4;
+    int x = 2, y = dim.y - 5;
     OutputString(10, x, y, Screen::getKeyDisplay(interface_key::SELECT));
     OutputString(canToggle ? 15 : 8, x, y, ": Toggle labor, ");
 
@@ -2197,7 +2210,7 @@ void viewscreen_unitlaborsst::render()
     OutputString(10, x, y, Screen::getKeyDisplay(interface_key::UNITJOB_ZOOM_CRE));
     OutputString(15, x, y, ": Zoom-Cre");
 
-    x = 2; y = dim.y - 3;
+    x = 2; y = dim.y - 4;
     OutputString(10, x, y, Screen::getKeyDisplay(interface_key::LEAVESCREEN));
     OutputString(15, x, y, ": Done, ");
 
@@ -2241,7 +2254,7 @@ void viewscreen_unitlaborsst::render()
         break;
     }
 
-    x = 2; y = dim.y - 2;
+    x = 2; y = dim.y - 3;
     OutputString(10, x, y, Screen::getKeyDisplay(interface_key::CUSTOM_X));
     OutputString(10, x, y, Screen::getKeyDisplay(interface_key::CUSTOM_SHIFT_X));
     OutputString(15, x, y, ": Select ");
@@ -2252,12 +2265,13 @@ void viewscreen_unitlaborsst::render()
     OutputString(15, x, y, ": Batch ");
     OutputString(10, x, y, Screen::getKeyDisplay(interface_key::CUSTOM_E));
     OutputString(15, x, y, ": Edit ");
+    x = 2; y = dim.y - 2;
     OutputString(10, x, y, Screen::getKeyDisplay(interface_key::CUSTOM_P));
     OutputString(15, x, y, ": Apply Profession ");
     OutputString(10, x, y, Screen::getKeyDisplay(interface_key::CUSTOM_SHIFT_P));
-    OutputString(15, x, y, ": Save Prof. ");
+    OutputString(15, x, y, ": Save Profession ");
     OutputString(10, x, y, Screen::getKeyDisplay(interface_key::CUSTOM_SHIFT_R));
-    OutputString(15, x, y, ": Remove Saved Prof. ");
+    OutputString(15, x, y, ": Remove Saved Profession ");
 }
 
 df::unit *viewscreen_unitlaborsst::getSelectedUnit()
