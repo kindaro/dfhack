@@ -629,12 +629,14 @@ namespace unit_ops {
 
 struct ProfessionTemplate
 {
+    std::string path;
     std::string name;
     bool mask;
     std::vector<df::unit_labor> labors;
 
     bool load(string directory, string file)
     {
+        path = directory + file;
         cerr << "Attempt to load " << file << endl;
         std::ifstream infile(directory + "/" + file);
         if (infile.bad()) {
@@ -1069,6 +1071,88 @@ protected:
     bool selection_empty;
     ListColumn<size_t> menu_options;
     vector<UnitInfo*> units;
+private:
+    void resize(int32_t x, int32_t y)
+    {
+        dfhack_viewscreen::resize(x, y);
+        menu_options.resize();
+    }
+};
+
+class viewscreen_unitprofessionrm : public dfhack_viewscreen {
+public:
+    viewscreen_unitprofessionrm()
+        :menu_options(-1) // default
+    {
+        menu_options.multiselect = true;
+        menu_options.auto_select = true;
+        menu_options.allow_search = false;
+        menu_options.left_margin = 2;
+        menu_options.bottom_margin = 2;
+        menu_options.clear();
+
+        manager.reload();
+        for (size_t i = 0; i < manager.templates.size(); i++) {
+            std::string name = manager.templates[i].name;
+            if (manager.templates[i].mask)
+                name += " (mask)";
+            ListEntry<size_t> elem(name, i);
+            menu_options.add(elem);
+        }
+        menu_options.filterDisplay();
+
+        selection_empty = true;
+    }
+    std::string getFocusString() { return "unitlabors/profession"; }
+    void feed(set<df::interface_key> *events)
+    {
+        if (events->count(interface_key::LEAVESCREEN))
+        {
+            Screen::dismiss(this);
+            return;
+        }
+        if (menu_options.feed(events))
+        {
+            // Allow left mouse button to trigger menu options
+            if (menu_options.feed_mouse_set_highlight)
+                events->insert(interface_key::SELECT);
+            else
+                return;
+        }
+        if (events->count(interface_key::SELECT))
+        {
+            if (menu_options.hasSelection())
+            {
+                rm_profession(menu_options.getFirstSelectedElem());
+            }
+            Screen::dismiss(this);
+            return;
+        }
+    }
+    void rm_profession(size_t selected)
+    {
+        if (manager.templates.empty() || selected >= manager.templates.size())
+            return;
+        ProfessionTemplate prof = manager.templates[selected];
+
+        cerr << prof.path << endl;
+    }
+    void render()
+    {
+        dfhack_viewscreen::render();
+        Screen::clear();
+        int x = 2, y = 2;
+        Screen::drawBorder("  Dwarf Manipulator - Remove Custom Profession  ");
+        if (!manager.templates.size())
+        {
+            OutputString(COLOR_LIGHTRED, x, y, "No saved professions");
+            return;
+        }
+        menu_options.display(true);
+    }
+protected:
+    bool selection_empty;
+    ListColumn<size_t> menu_options;
 private:
     void resize(int32_t x, int32_t y)
     {
@@ -1845,6 +1929,11 @@ void viewscreen_unitlaborsst::feed(set<df::interface_key> *events)
         manager.save_from_unit(cur);
     }
 
+    if (events->count(interface_key::CUSTOM_SHIFT_R))
+    {
+        Screen::show(dts::make_unique<viewscreen_unitprofessionrm>(), plugin_self);
+    }
+
     if (VIRTUAL_CAST_VAR(unitlist, df::viewscreen_unitlistst, parent))
     {
         if (events->count(interface_key::UNITJOB_VIEW_UNIT) || events->count(interface_key::UNITJOB_ZOOM_CRE))
@@ -2167,6 +2256,8 @@ void viewscreen_unitlaborsst::render()
     OutputString(15, x, y, ": Apply Profession ");
     OutputString(10, x, y, Screen::getKeyDisplay(interface_key::CUSTOM_SHIFT_P));
     OutputString(15, x, y, ": Save Prof. ");
+    OutputString(10, x, y, Screen::getKeyDisplay(interface_key::CUSTOM_SHIFT_R));
+    OutputString(15, x, y, ": Remove Saved Prof. ");
 }
 
 df::unit *viewscreen_unitlaborsst::getSelectedUnit()
